@@ -5,6 +5,8 @@ from beanie import init_beanie
 from fastapi import FastAPI
 from pydantic_settings import BaseSettings
 
+from models.case import Case
+from routers import cases as  cases_router
 
 class Settings(BaseSettings):
     db_url: str
@@ -21,7 +23,7 @@ async def lifespan(app: FastAPI):
     app.db_client = motor.motor_asyncio.AsyncIOMotorClient(settings.db_url)
     await init_beanie(
         database=app.db_client[settings.db_name],
-        document_models=[]
+        document_models=[Case]
     )
     print("Database Connected")
     yield
@@ -34,6 +36,8 @@ app = FastAPI(
     summary="Documenting, Tracking & Analyzing Human Rights Violations",
     lifespan=lifespan
 )
+
+app.include_router(cases_router.router, tags=["Cases"], prefix="/cases")
 
 @app.get("/")
 async def root():
