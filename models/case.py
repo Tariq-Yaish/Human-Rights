@@ -39,3 +39,13 @@ class UpdateCase(BaseModel):
 
     class Config:
         orm_mode = True
+
+class CaseStatusHistory(Document):
+    case_id: PydanticObjectId
+    previous_status: str
+    new_status: str
+    changed_at: datetime = Field(default_factory = datetime.utcnow)
+    changed_by: PydanticObjectId
+
+    class Settings:
+        name = "case_status_history"

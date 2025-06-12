@@ -1,7 +1,7 @@
 from beanie import PydanticObjectId
 from beanie.odm.operators.find.comparison import In
 from fastapi import APIRouter, Body, HTTPException, status
-from models.case import Case, UpdateCase
+from models.case import Case, UpdateCase, CaseStatusHistory
 from typing import List, Optional
 from datetime import date
 
@@ -68,26 +68,41 @@ async def list_cases(status: Optional[str] = None,
     cases = await Case.find(*search_filter).to_list()
     return cases
 
+
 @router.patch("/{id}",
-              response_description = "Update a case",
+              response_description = "Update a case and log status change",
               response_model = Case
 )
-async def update_case(case_id: PydanticObjectId, update_data: UpdateCase):
-    """Update the status, priority, violation_type and other fields of a case"""
-    update_dict = update_data.model_dump(exclude_unset = True)
+async def update_case(id: PydanticObjectId, update_data: UpdateCase):
+    """
+    Update a case by its ID. If the status is changed, a log is created in the case_status_history collection.
+    """
+    case = await Case.get(id)
+    if not case:
+        raise HTTPException(status_code=404, detail=f"Case with ID {id} is not found")
+
+    previous_status = case.status
+
+    update_dict = update_data.model_dump(exclude_unset=True)
 
     if len(update_dict) >= 1:
-        case_to_update = await Case.find_one(Case.id == case_id).update({"$set": update_dict})
-        if case_to_update:
-            if (case := await Case.get(case_id)) is not None:
-                return case
+        await case.update({"$set": update_dict})
 
-    if (existing_case := await Case.get(case_id)) is not None:
-        return existing_case
+        new_status = update_dict.get("status")
+        if new_status and new_status != previous_status:
+            history_log = CaseStatusHistory(
+                case_id = case.id,
+                previous_status = previous_status,
+                new_status = new_status,
+                changed_by = case.created_by
+            )
+            await history_log.create()
 
-    raise HTTPException(status_code = 404, detail = f"Case with ID {case_id} is not found.")
+    if (updated_case := await Case.get(id)) is not None:
+        return updated_case
 
-#This API_end_Point is considered a soft Delete or Updating the case to the archive!
+    raise HTTPException(status_code=404, detail=f"Case with ID {id} not found")
+
 @router.delete("/{id}",
                response_description = "Archiving a case",
                status_code = status.HTTP_204_NO_CONTENT
