@@ -45,7 +45,9 @@ async def list_cases(status: Optional[str] = None,
                      priority: Optional[str] = None,
                      violation_type: Optional[str] = None,
                      start_date: Optional[date] = None,
-                     end_date: Optional[date] = None):
+                     end_date: Optional[date] = None,
+                     country: Optional[str] = None,
+                     region: Optional[str] = None):
     """List all cases in the database with filtering"""
     search_filter = []
     search_filter.append(Case.is_archived == False)
@@ -64,6 +66,12 @@ async def list_cases(status: Optional[str] = None,
 
     if end_date:
         search_filter.append(Case.date_occurred <= end_date)
+
+    if country:
+        search_filter.append(Case.location.country == country)
+
+    if region:
+        search_filter.append(Case.location.region == region)
 
     cases = await Case.find(*search_filter).to_list()
     return cases
