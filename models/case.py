@@ -25,6 +25,17 @@ class Case(Document):
     victims: Optional[List[PydanticObjectId]] = None
     perpetrators: Optional[List[Perpetrator]] = None
     created_by: PydanticObjectId
+    is_archived: bool = Field(default = False, description="Whether the case is archived or not")
 
     class Settings:
         name = "cases"
+
+class UpdateCase(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    violation_types: Optional[List[str]] = None
+    status: Optional[str] = None
+    priority: Optional[str] = None
+
+    class Config:
+        orm_mode = True
