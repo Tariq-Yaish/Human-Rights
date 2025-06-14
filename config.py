@@ -7,7 +7,7 @@ class BaseConfig(BaseSettings):
     DB_NAME: Optional[str] = None
 
     #JWT Security
-    SECRET_KEY: Optional[str] = None
+    SECRET_KEY: str
 
     #Cloudinary
     CLOUDINARY_SECRET_KEY: Optional[str] = None
@@ -18,3 +18,5 @@ class BaseConfig(BaseSettings):
         env_file = ".env",
         extra = "ignore"
     )
+
+settings = BaseConfig()

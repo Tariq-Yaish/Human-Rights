@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Form, File, UploadFile, HTTPException, status
-from models.incident import IncidentReport, Evidence, UpdateIncidentReport, ViolationTypeAnalytics
+from fastapi import APIRouter, Form, File, UploadFile, HTTPException, status, Depends
 from typing import List, Optional
 from datetime import date, datetime
 import json
+
+from models.incident import IncidentReport, Evidence, UpdateIncidentReport, ViolationTypeAnalytics
+from models.user import CurrentUser
+from authentication import auth_handler
 
 import cloudinary
 import cloudinary.uploader
 from config import BaseConfig
 
 settings = BaseConfig()
+
 cloudinary.config(
     cloud_name = settings.CLOUDINARY_CLOUD_NAME,
     api_key = settings.CLOUDINARY_API_KEY,
@@ -24,7 +28,7 @@ router = APIRouter()
              )
 async def create_incident_report(
         report_data: str = Form(...),
-        evidence_file: Optional[UploadFile] = File(None)
+        evidence_file: Optional[UploadFile] = File(None),
 ):
     """
     Create a new incident report, accepting report details as a JSON string.
@@ -96,7 +100,7 @@ async def list_incident_reports(
               )
 async def update_report_status(
         report_id: str,
-        update_data: UpdateIncidentReport
+        update_data: UpdateIncidentReport,
 ):
     """
     Update the status of a report (e.g., from 'new' to 'verified').

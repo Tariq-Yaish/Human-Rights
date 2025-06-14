@@ -32,5 +32,5 @@ async def login_user(login_details: Login = Body(...)):
             detail="Invalid username and/or password"
         )
 
-    token = auth_handler.encode_token(user.id, user.username)
+    token = auth_handler.encode_token(str(user.id), user.username)
     return {'token': token}

@@ -4,7 +4,10 @@ from fastapi import APIRouter, Body, HTTPException, status, UploadFile, File, Fo
 from typing import List, Optional
 from datetime import date
 
-from models.case import Case, UpdateCase, CaseStatusHistory, Evidence
+from models.case import Case, UpdateCase, CaseStatusHistory, Evidence, Location, Perpetrator
+from models.victim import Individual
+from models.user import CurrentUser
+from authentication import auth_handler
 
 from config import BaseConfig
 import cloudinary
@@ -25,7 +28,7 @@ cloudinary.config(
     status_code = status.HTTP_201_CREATED
 )
 async def create_case(case: Case = Body(...)):
-    case.created_by = PydanticObjectId("66688d98ba2785d91dfc33a9") # Placeholder User ID
+    case.created_by = PydanticObjectId("66688d98ba2785d91dfc33a9")
 
     existing_case = await Case.find_one(Case.case_id == case.case_id)
     if existing_case:
@@ -33,7 +36,25 @@ async def create_case(case: Case = Body(...)):
             status_code = status.HTTP_409_CONFLICT,
             detail = f"Case with ID {case.case_id} already exists."
         )
+
+    if case.victims:
+        for victim_id in case.victims:
+            individual = await Individual.get(victim_id)
+            if not individual:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Victim with ID {victim_id} not found. Cannot link to non-existent victim."
+                )
+
     await case.create()
+
+    if case.victims:
+        for victim_id in case.victims:
+            individual = await Individual.get(victim_id)
+            if individual:
+                if case.id not in individual.cases_involved:
+                    individual.cases_involved.append(case.id)
+                    await individual.save()
     return case
 
 @router.get("/{case_id}",
@@ -106,6 +127,41 @@ async def update_case(id: PydanticObjectId,
 
     previous_status = case.status
     update_dict = update_data.model_dump(exclude_unset=True)
+
+    if "victims" in update_dict and update_dict["victims"] is not None:
+        new_victim_ids = set(update_dict["victims"])
+        existing_victim_ids = set(str(v_id) for v_id in case.victims) if case.victims else set()
+
+        victims_to_add = new_victim_ids - existing_victim_ids
+        victims_to_remove = existing_victim_ids - new_victim_ids
+
+        for victim_id_str in victims_to_add:
+            try:
+                victim_oid = PydanticObjectId(victim_id_str)
+            except Exception:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid format for victim ID: {victim_id_str}"
+                )
+            individual = await Individual.get(victim_oid)
+            if not individual:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Victim with ID {victim_id_str} not found. Cannot link non-existent victim."
+                )
+            if case.id not in individual.cases_involved:
+                individual.cases_involved.append(case.id)
+                await individual.save()
+
+        for victim_id_str in victims_to_remove:
+            try:
+                victim_oid = PydanticObjectId(victim_id_str)
+            except Exception:
+                continue
+            individual = await Individual.get(victim_oid)
+            if individual and case.id in individual.cases_involved:
+                individual.cases_involved.remove(case.id)
+                await individual.save()
 
     if len(update_dict) >= 1:
         await case.update({"$set": update_dict})
