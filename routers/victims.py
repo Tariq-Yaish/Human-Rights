@@ -1,5 +1,9 @@
 from fastapi import APIRouter, Body, HTTPException, status
+from typing import List
+
 from models.victim import Individual, UpdateVictimRisk
+from models.case import Case
+from beanie import PydanticObjectId
 
 router = APIRouter()
 
@@ -44,7 +48,6 @@ async def update_victim_risk(victim_id: str, risk_data: UpdateVictimRisk):
     """
     Update the risk assessment fields for a specific individual.
     """
-    # Create a dictionary of fields to update, using dot notation for nested objects
     update_dict = {
         f"risk_assessment.{key}": value
         for key, value in risk_data.model_dump(exclude_unset = True).items()
@@ -63,3 +66,26 @@ async def update_victim_risk(victim_id: str, risk_data: UpdateVictimRisk):
         return existing_victim
 
     raise HTTPException(status_code = 404, detail = f"Individual with ID {victim_id} not found")
+
+@router.get("/case/{case_id}",
+    response_description = "List victims linked to a case",
+    response_model = List[Individual]
+)
+async def list_victims_linked_to_case(case_id: PydanticObjectId):
+    """
+    Retrieve a list of victims or witnesses linked to a specific case by its ID.
+    """
+    case = await Case.get(case_id)
+
+    if not case:
+        raise HTTPException(
+            status_code = status.HTTP_404_NOT_FOUND,
+            detail = f"Case with ID {case_id} not found."
+        )
+
+    if not case.victims:
+        return []
+
+    linked_victims = await Individual.find({"_id": {"$in": case.victims}}).to_list()
+
+    return linked_victims

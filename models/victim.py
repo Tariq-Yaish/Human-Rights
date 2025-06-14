@@ -25,7 +25,7 @@ class UpdateVictimRisk(BaseModel):
     protection_needed: Optional[bool] = None
 
 class Individual(Document):
-    individual_id: str = Field(..., unique=True)  # <-- Add this new field
+    individual_id: str = Field(..., unique=True)
     type: str = Field(default="victim", description="Can be 'victim' or 'witness'")
     anonymous: bool = False
     pseudonym: Optional[str] = None
@@ -33,7 +33,7 @@ class Individual(Document):
     contact_info: VictimContactInfo
     cases_involved: List[PydanticObjectId] = Field(default = [])
     risk_assessment: RiskAssessment = Field(default_factory = RiskAssessment)
-    support_services: Optional[List[dict]] = Field(default = []) # Using dict for flexibility
+    support_services: Optional[List[dict]] = Field(default = [])
     created_at: datetime = Field(default_factory = datetime.utcnow)
     updated_at: datetime = Field(default_factory = datetime.utcnow)
 

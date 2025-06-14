@@ -14,6 +14,7 @@ from routers import cases as  cases_router
 from routers import users as users_router
 from routers import incidents as incidents_router
 from routers import victims as victims_router
+from routers.analytics import router as analytics_router
 
 settings = BaseConfig()
 
@@ -40,6 +41,7 @@ app.include_router(cases_router.router, tags = ["Cases"], prefix = "/cases")
 app.include_router(users_router.router, tags = ["Users"], prefix = "/users")
 app.include_router(incidents_router.router, tags = ["Incidents"], prefix = "/reports")
 app.include_router(victims_router.router, tags=["Victims"], prefix="/victims")
+app.include_router(analytics_router, prefix="/analytics", tags=["Analytics"])
 
 @app.get("/")
 async def root():
