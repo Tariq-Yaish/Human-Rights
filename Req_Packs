@@ -3,6 +3,7 @@ uvicorn==0.29.0
 beanie==1.26.0
 pydantic-settings==2.2.1
 passlib[bcrypt]
-python-jose[cryptography]
+PyJWT==2.8.0
+cloudinary==1.40.0
 python-multipart
 email-validator==2.2.0
